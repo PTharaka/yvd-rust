@@ -1,4 +1,5 @@
 use serde::Serialize;
+use std::io::{BufRead, BufReader};
 use std::collections::HashMap;
 use std::process::{Child, Stdio};
 use std::sync::{Arc, Mutex};
@@ -9,6 +10,13 @@ use yvd_rust::{DownloadOptions, DownloadStatus, DownloadTask};
 #[derive(Default)]
 struct AppState {
     processes: Arc<Mutex<HashMap<String, Arc<Mutex<Child>>>>>,
+    progress: Arc<Mutex<HashMap<String, DownloadProgress>>>,
+}
+
+#[derive(Clone, Default, Serialize)]
+struct DownloadProgress {
+    speed: Option<String>,
+    eta: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -17,6 +25,8 @@ struct QueueItem {
     url: String,
     status: DownloadStatus,
     progress_percent: f64,
+    speed: Option<String>,
+    eta: Option<String>,
     error: Option<String>,
 }
 
@@ -36,6 +46,24 @@ fn save_tasks(path: &std::path::Path, tasks: &[DownloadTask]) -> Result<(), Stri
     yvd_rust::persistence::save_queue(path, tasks).map_err(|error| error.to_string())
 }
 
+fn parse_progress(line: &str) -> Option<(f64, Option<String>, Option<String>)> {
+    let percent_end = line.find('%')?;
+    let percent_start = line[..percent_end]
+        .rfind(|character: char| !character.is_ascii_digit() && character != '.')
+        .map_or(0, |index| index + 1);
+    let percent = line[percent_start..percent_end].parse().ok()?;
+    let speed = line
+        .split_whitespace()
+        .find(|value| value.ends_with("/s"))
+        .map(str::to_string);
+    let eta = line
+        .split_whitespace()
+        .position(|value| value == "ETA")
+        .and_then(|index| line.split_whitespace().nth(index + 1))
+        .map(str::to_string);
+    Some((percent, speed, eta))
+}
+
 fn find_task_mut<'a>(tasks: &'a mut [DownloadTask], id: &str) -> Result<&'a mut DownloadTask, String> {
     tasks
         .iter_mut()
@@ -44,16 +72,29 @@ fn find_task_mut<'a>(tasks: &'a mut [DownloadTask], id: &str) -> Result<&'a mut 
 }
 
 #[tauri::command]
-fn queue_status(app: tauri::AppHandle) -> Result<Vec<QueueItem>, String> {
+fn queue_status(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, AppState>,
+) -> Result<Vec<QueueItem>, String> {
     let (_, tasks) = load_tasks(&app)?;
     Ok(tasks
         .into_iter()
-        .map(|task| QueueItem {
-            id: task.id,
-            url: task.options.url,
-            status: task.status,
-            progress_percent: task.progress_percent,
-            error: task.error,
+        .map(|task| {
+            let live_progress = state
+                .progress
+                .lock()
+                .ok()
+                .and_then(|progress| progress.get(&task.id).cloned())
+                .unwrap_or_default();
+            QueueItem {
+                speed: live_progress.speed,
+                eta: live_progress.eta,
+                id: task.id,
+                url: task.options.url,
+                status: task.status,
+                progress_percent: task.progress_percent,
+                error: task.error,
+            }
         })
         .collect())
 }
@@ -75,6 +116,19 @@ fn queue_add(app: tauri::AppHandle, url: String) -> Result<String, String> {
 }
 
 #[tauri::command]
+fn metadata_preview(url: String) -> Result<yvd_rust::model::VideoMetadata, String> {
+    let url = url.trim();
+    if url.is_empty() {
+        return Err("A video or playlist URL is required.".to_string());
+    }
+    if !url.starts_with("https://") && !url.starts_with("http://") {
+        return Err("Enter a valid HTTP or HTTPS URL.".to_string());
+    }
+    yvd_rust::metadata::probe(std::path::Path::new("yt-dlp"), url)
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
 fn start_download(
     app: tauri::AppHandle,
     state: tauri::State<'_, AppState>,
@@ -93,7 +147,7 @@ fn start_download(
     let yt_dlp = std::path::PathBuf::from("yt-dlp");
     let ffmpeg = std::path::PathBuf::from("ffmpeg");
     let args = build_yt_dlp_args(&options, &yt_dlp, &ffmpeg);
-    let child = match std::process::Command::new(&args[0])
+    let mut child = match std::process::Command::new(&args[0])
         .args(&args[1..])
         .stdout(Stdio::null())
         .stderr(Stdio::piped())
@@ -109,11 +163,33 @@ fn start_download(
             return Err(error.to_string());
         }
     };
+    let stderr = child.stderr.take();
     let child = Arc::new(Mutex::new(child));
     state.processes.lock().map_err(|_| "Process state is unavailable.".to_string())?.insert(id.clone(), Arc::clone(&child));
 
     let app = app.clone();
     let processes = Arc::clone(&state.processes);
+    let progress = Arc::clone(&state.progress);
+    let reader_progress = Arc::clone(&progress);
+    let progress_app = app.clone();
+    let progress_id = id.clone();
+    if let Some(stderr) = stderr {
+        std::thread::spawn(move || {
+            for line in BufReader::new(stderr).lines().map_while(Result::ok) {
+                if let Some((percent, speed, eta)) = parse_progress(&line) {
+                    if let Ok((path, mut tasks)) = load_tasks(&progress_app) {
+                        if let Ok(task) = find_task_mut(&mut tasks, &progress_id) {
+                            task.progress_percent = percent.clamp(0.0, 100.0);
+                            let _ = save_tasks(&path, &tasks);
+                        }
+                    }
+                    if let Ok(mut values) = reader_progress.lock() {
+                        values.insert(progress_id.clone(), DownloadProgress { speed, eta });
+                    }
+                }
+            }
+        });
+    }
     std::thread::spawn(move || {
         let result = child.lock().ok().and_then(|mut process| process.wait().ok());
         let _ = (|| -> Result<(), String> {
@@ -129,6 +205,7 @@ fn start_download(
             }
             save_tasks(&path, &tasks)?;
             processes.lock().map_err(|_| "Process state is unavailable.".to_string())?.remove(&id);
+            progress.lock().map_err(|_| "Progress state is unavailable.".to_string())?.remove(&id);
             Ok(())
         })();
     });
@@ -182,6 +259,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             queue_status,
             queue_add,
+            metadata_preview,
             start_download,
             pause_download,
             cancel_download,
