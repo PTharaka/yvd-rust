@@ -25,3 +25,6 @@ button:disabled { cursor: wait; opacity: .6; }
 .queue-item span { margin-left: 12px; color: #65d6a1; text-transform: uppercase; font-size: 12px; }
 .actions { display: flex; align-items: center; gap: 8px; }
 .actions button { padding: 9px 11px; font-size: 11px; }
+.progress-track { width: 180px; height: 6px; margin-top: 10px; overflow: hidden; border-radius: 999px; background: #2b3544; }
+.progress-bar { height: 100%; border-radius: inherit; background: #65d6a1; transition: width .3s ease; }
+.actions small { color: #9da8b8; }

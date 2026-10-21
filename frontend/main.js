@@ -27,6 +27,10 @@ async function refreshQueue() {
               ? `<button data-action="cancel" data-id="${task.id}" class="secondary">CANCEL</button>` : ""}
             ${task.status === "failed"
               ? `<button data-action="retry" data-id="${task.id}" class="secondary">RETRY</button>` : ""}
+            <div class="progress-track">
+              <div class="progress-bar" style="width: ${Math.max(0, Math.min(100, task.progress_percent))}%"></div>
+            </div>
+            <small>${Math.round(task.progress_percent)}%${task.speed ? ` · ${escapeHtml(task.speed)}` : ""}${task.eta ? ` · ETA ${escapeHtml(task.eta)}` : ""}</small>
           </div>
         </article>`).join("")
       : "<p>Queue is empty.</p>";
@@ -84,3 +88,4 @@ document.querySelector("#check-updates").addEventListener("click", async () => {
   }
 });
 refreshQueue();
+setInterval(refreshQueue, 2000);
