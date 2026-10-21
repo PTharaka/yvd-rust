@@ -27,6 +27,7 @@ button:disabled { cursor: wait; opacity: .6; }
 .queue-list { display: grid; gap: 12px; }
 .queue-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 24px; padding: 18px; border: 1px solid #2c3544; border-radius: 12px; background: #131923; }
 .queue-item p { margin: 8px 0 0; color: #9da8b8; overflow-wrap: anywhere; }
+.queue-item .queue-error { color: #ff9d9d; }
 .queue-item span { display: inline-block; margin-top: 6px; color: #65d6a1; text-transform: uppercase; font-size: 12px; }
 .actions { min-width: 230px; display: grid; align-content: start; gap: 8px; }
 .action-buttons { display: flex; flex-wrap: wrap; gap: 8px; }

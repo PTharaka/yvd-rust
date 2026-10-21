@@ -11,6 +11,7 @@ use yvd_rust::{DownloadOptions, DownloadStatus, DownloadTask};
 struct AppState {
     processes: Arc<Mutex<HashMap<String, Arc<Mutex<Child>>>>>,
     progress: Arc<Mutex<HashMap<String, DownloadProgress>>>,
+    output: Arc<Mutex<HashMap<String, String>>>,
 }
 
 #[derive(Clone, Default, Serialize)]
@@ -58,6 +59,28 @@ fn load_tasks(app: &tauri::AppHandle) -> Result<(std::path::PathBuf, Vec<Downloa
 
 fn save_tasks(path: &std::path::Path, tasks: &[DownloadTask]) -> Result<(), String> {
     yvd_rust::persistence::save_queue(path, tasks).map_err(|error| error.to_string())
+}
+
+fn resolve_tool(name: &str) -> std::path::PathBuf {
+    let candidate = std::path::PathBuf::from(name);
+    if candidate.is_absolute() {
+        return candidate;
+    }
+    if let Some(paths) = std::env::var_os("PATH") {
+        for directory in std::env::split_paths(&paths) {
+            let path = directory.join(name);
+            if path.is_file() {
+                return path;
+            }
+        }
+    }
+    for directory in ["/opt/homebrew/bin", "/usr/local/bin", "/usr/bin"] {
+        let path = std::path::Path::new(directory).join(name);
+        if path.is_file() {
+            return path;
+        }
+    }
+    candidate
 }
 
 fn parse_progress(line: &str) -> Option<(f64, Option<String>, Option<String>)> {
@@ -156,7 +179,7 @@ fn metadata_preview(url: String) -> Result<yvd_rust::model::VideoMetadata, Strin
     if !url.starts_with("https://") && !url.starts_with("http://") {
         return Err("Enter a valid HTTP or HTTPS URL.".to_string());
     }
-    yvd_rust::metadata::probe(std::path::Path::new("yt-dlp"), url)
+    yvd_rust::metadata::probe(&resolve_tool("yt-dlp"), url)
         .map_err(|error| error.to_string())
 }
 
@@ -172,12 +195,14 @@ fn start_download(
         return Err(format!("Download {} cannot be started from {}.", id, task.status.as_str()));
     }
     let options = task.options.clone();
+    std::fs::create_dir_all(&options.output_dir)
+        .map_err(|error| format!("Could not create output directory: {error}"))?;
     task.status = DownloadStatus::Downloading;
     task.error = None;
     save_tasks(&path, &tasks)?;
 
-    let yt_dlp = std::path::PathBuf::from("yt-dlp");
-    let ffmpeg = std::path::PathBuf::from("ffmpeg");
+    let yt_dlp = resolve_tool("yt-dlp");
+    let ffmpeg = resolve_tool("ffmpeg");
     let args = build_yt_dlp_args(&options, &yt_dlp, &ffmpeg);
     let mut child = match std::process::Command::new(&args[0])
         .args(&args[1..])
@@ -202,6 +227,8 @@ fn start_download(
     let app = app.clone();
     let processes = Arc::clone(&state.processes);
     let progress = Arc::clone(&state.progress);
+    let output = Arc::clone(&state.output);
+    let reader_output = Arc::clone(&output);
     let reader_progress = Arc::clone(&progress);
     let progress_app = app.clone();
     let progress_id = id.clone();
@@ -218,6 +245,10 @@ fn start_download(
                     if let Ok(mut values) = reader_progress.lock() {
                         values.insert(progress_id.clone(), DownloadProgress { speed, eta });
                     }
+                } else if !line.trim().is_empty() {
+                    if let Ok(mut values) = reader_output.lock() {
+                        values.insert(progress_id.clone(), line);
+                    }
                 }
             }
         });
@@ -231,13 +262,18 @@ fn start_download(
                 task.status = if result.map(|status| status.success()).unwrap_or(false) {
                     DownloadStatus::Completed
                 } else {
-                    task.error = Some("The download process failed.".to_string());
+                    task.error = output
+                        .lock()
+                        .ok()
+                        .and_then(|values| values.get(&id).cloned())
+                        .or_else(|| Some("The download process failed.".to_string()));
                     DownloadStatus::Failed
                 };
             }
             save_tasks(&path, &tasks)?;
             processes.lock().map_err(|_| "Process state is unavailable.".to_string())?.remove(&id);
             progress.lock().map_err(|_| "Progress state is unavailable.".to_string())?.remove(&id);
+            output.lock().map_err(|_| "Process output state is unavailable.".to_string())?.remove(&id);
             Ok(())
         })();
     });

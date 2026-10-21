@@ -30,6 +30,7 @@ async function refreshQueue() {
             <strong>${escapeHtml(task.id)}</strong>
             <span>${escapeHtml(task.status)}</span>
             <p>${escapeHtml(task.url)}</p>
+            ${task.error ? `<p class="queue-error">${escapeHtml(task.error)}</p>` : ""}
           </div>
           <div class="actions">
             <div class="action-buttons">

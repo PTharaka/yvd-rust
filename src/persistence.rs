@@ -17,7 +17,9 @@ pub fn save_queue(path: &Path, tasks: &[DownloadTask]) -> io::Result<()> {
                 .as_deref()
                 .unwrap_or("")
                 .replace(['\t', '\r', '\n'], " "),
-            task.options.quality.map_or_else(String::new, |value| value.to_string()),
+            task.options
+                .quality
+                .map_or_else(String::new, |value| value.to_string()),
             task.options.audio_only,
             task.options.use_browser_cookies,
             task.options.max_retries
