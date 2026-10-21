@@ -31,12 +31,21 @@
 
       <section class="card">
         <div class="section-heading">
-          <h2>DOWNLOAD SETTINGS</h2>
-          <button id="save-settings" class="secondary">SAVE SETTINGS</button>
+          <div>
+            <h2>DOWNLOAD SETTINGS</h2>
+            <p class="section-help">These settings apply to downloads added after you save them.</p>
+          </div>
+          <button id="save-settings">SAVE SETTINGS</button>
         </div>
         <div class="settings-grid">
-          <label>OUTPUT DIRECTORY<input id="output-dir" type="text" placeholder="downloads" /></label>
-          <label>VIDEO QUALITY<select id="quality">
+          <label class="field field-wide">Output directory
+            <div class="path-input">
+              <input id="output-dir" type="text" placeholder="Choose a folder or use downloads" />
+              <button id="browse-output" type="button" class="secondary">BROWSE</button>
+            </div>
+            <small>Choose where completed files will be saved.</small>
+          </label>
+          <label class="field">Video quality<select id="quality">
             <option value="">Best available</option>
             <option value="2160">2160p</option>
             <option value="1440">1440p</option>
@@ -44,16 +53,17 @@
             <option value="720">720p</option>
             <option value="480">480p</option>
           </select></label>
-          <label class="checkbox"><input id="audio-only" type="checkbox" /> AUDIO ONLY (MP3)</label>
-          <label class="checkbox"><input id="browser-cookies" type="checkbox" /> USE CHROME COOKIES</label>
-          <label>MAX RETRIES<input id="max-retries" type="number" min="0" max="20" step="1" /></label>
+          <label class="field">Maximum retries<input id="max-retries" type="number" min="0" max="20" step="1" /><small>Retries used when a download temporarily fails.</small></label>
+          <label class="checkbox"><input id="audio-only" type="checkbox" /><span><strong>Audio only</strong><small>Save as MP3 instead of video.</small></span></label>
+          <label class="checkbox"><input id="browser-cookies" type="checkbox" /><span><strong>Use Chrome cookies</strong><small>Useful for age-restricted or private videos.</small></span></label>
         </div>
+        <p id="settings-message" class="inline-message" role="status"></p>
       </section>
 
       <section id="preview" class="card preview-card" hidden>
         <div class="section-heading">
           <h2>MEDIA PREVIEW</h2>
-          <button id="clear-preview" class="secondary">CLEAR</button>
+          <button id="clear-preview" class="secondary">CLEAR PREVIEW</button>
         </div>
         <div class="preview-content">
           <img id="thumbnail" alt="" />
@@ -71,7 +81,7 @@
           <h2>DOWNLOAD QUEUE</h2>
           <button id="refresh" class="secondary">REFRESH</button>
         </div>
-        <pre id="queue">Queue is empty.</pre>
+        <div id="queue" class="queue-list">Queue is empty.</div>
       </section>
     </main>
     <script type="module" src="/main.js"></script>

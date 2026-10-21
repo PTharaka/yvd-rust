@@ -43,6 +43,7 @@ pub struct DownloadOptions {
     pub quality: Option<u16>,
     pub audio_only: bool,
     pub use_browser_cookies: bool,
+    pub max_retries: u32,
 }
 
 impl DownloadOptions {
@@ -53,6 +54,7 @@ impl DownloadOptions {
             quality: None,
             audio_only: false,
             use_browser_cookies: false,
+            max_retries: 2,
         }
     }
 }

@@ -126,6 +126,7 @@ fn queue_add(app: tauri::AppHandle, url: String) -> Result<String, String> {
     options.quality = settings.quality;
     options.audio_only = settings.audio_only;
     options.use_browser_cookies = settings.use_browser_cookies;
+    options.max_retries = settings.max_retries;
     tasks.push(DownloadTask::new(&id, options));
     save_tasks(&path, &tasks)?;
     Ok(id)
@@ -290,6 +291,7 @@ fn is_dev_build() -> bool {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(AppState::default())
         .invoke_handler(tauri::generate_handler![

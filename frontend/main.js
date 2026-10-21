@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { open } from "@tauri-apps/plugin-dialog";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { check } from "@tauri-apps/plugin-updater";
 
@@ -16,6 +17,7 @@ const quality = document.querySelector("#quality");
 const audioOnly = document.querySelector("#audio-only");
 const browserCookies = document.querySelector("#browser-cookies");
 const maxRetries = document.querySelector("#max-retries");
+const settingsMessage = document.querySelector("#settings-message");
 let previewUrl = "";
 
 async function refreshQueue() {
@@ -30,14 +32,16 @@ async function refreshQueue() {
             <p>${escapeHtml(task.url)}</p>
           </div>
           <div class="actions">
-            ${task.status === "queued" || task.status === "paused" || task.status === "failed"
-              ? `<button data-action="start" data-id="${task.id}">START</button>` : ""}
-            ${task.status === "downloading"
-              ? `<button data-action="pause" data-id="${task.id}" class="secondary">PAUSE</button>` : ""}
-            ${task.status === "downloading"
-              ? `<button data-action="cancel" data-id="${task.id}" class="secondary">CANCEL</button>` : ""}
-            ${task.status === "failed"
-              ? `<button data-action="retry" data-id="${task.id}" class="secondary">RETRY</button>` : ""}
+            <div class="action-buttons">
+              ${task.status === "queued" || task.status === "paused" || task.status === "failed"
+                ? `<button data-action="start" data-id="${task.id}">START</button>` : ""}
+              ${task.status === "downloading"
+                ? `<button data-action="pause" data-id="${task.id}" class="secondary">PAUSE</button>` : ""}
+              ${task.status === "downloading"
+                ? `<button data-action="cancel" data-id="${task.id}" class="secondary">CANCEL</button>` : ""}
+              ${task.status === "failed"
+                ? `<button data-action="retry" data-id="${task.id}" class="secondary">RETRY</button>` : ""}
+            </div>
             <div class="progress-track">
               <div class="progress-bar" style="width: ${Math.max(0, Math.min(100, task.progress_percent))}%"></div>
             </div>
@@ -116,6 +120,17 @@ document.querySelector("#clear-preview").addEventListener("click", () => {
   preview.hidden = true;
   previewUrl = "";
 });
+document.querySelector("#browse-output").addEventListener("click", async () => {
+  try {
+    const selected = await open({ directory: true, multiple: false, recursive: true });
+    if (typeof selected === "string") {
+      outputDir.value = selected;
+      settingsMessage.textContent = "Folder selected. Save settings to use it for new downloads.";
+    }
+  } catch (error) {
+    settingsMessage.textContent = `Could not choose folder: ${String(error)}`;
+  }
+});
 async function loadSettings() {
   try {
     const settings = await invoke("get_settings");
@@ -125,7 +140,7 @@ async function loadSettings() {
     browserCookies.checked = settings.use_browser_cookies;
     maxRetries.value = settings.max_retries;
   } catch (error) {
-    message.textContent = `Could not load settings: ${String(error)}`;
+    settingsMessage.textContent = `Could not load settings: ${String(error)}`;
   }
 }
 document.querySelector("#save-settings").addEventListener("click", async () => {
@@ -139,9 +154,9 @@ document.querySelector("#save-settings").addEventListener("click", async () => {
         max_retries: Number(maxRetries.value),
       },
     });
-    message.textContent = "Download settings saved.";
+    settingsMessage.textContent = "Settings saved. They apply to downloads added from now on.";
   } catch (error) {
-    message.textContent = `Could not save settings: ${String(error)}`;
+    settingsMessage.textContent = `Could not save settings: ${String(error)}`;
   }
 });
 document.querySelector("#refresh").addEventListener("click", refreshQueue);
