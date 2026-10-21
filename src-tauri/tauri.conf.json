@@ -22,7 +22,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "REPLACE_WITH_TAURI_UPDATER_PUBLIC_KEY",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEZEQTJBMTJGNDBCQjk3RDgKUldUWWw3dEFMNkdpL1RJcTh3WVJtVXlNWlh3Qi8rUXFySDJUSjhXaTRLZFdmNnVVVVY1cmtvV2QK%",
       "endpoints": [
         "https://github.com/PTharaka/yvd-rust/releases/latest/download/latest.json"
       ],
