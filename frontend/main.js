@@ -11,6 +11,11 @@ const thumbnail = document.querySelector("#thumbnail");
 const previewTitle = document.querySelector("#preview-title");
 const previewChannel = document.querySelector("#preview-channel");
 const previewDetails = document.querySelector("#preview-details");
+const outputDir = document.querySelector("#output-dir");
+const quality = document.querySelector("#quality");
+const audioOnly = document.querySelector("#audio-only");
+const browserCookies = document.querySelector("#browser-cookies");
+const maxRetries = document.querySelector("#max-retries");
 let previewUrl = "";
 
 async function refreshQueue() {
@@ -111,6 +116,34 @@ document.querySelector("#clear-preview").addEventListener("click", () => {
   preview.hidden = true;
   previewUrl = "";
 });
+async function loadSettings() {
+  try {
+    const settings = await invoke("get_settings");
+    outputDir.value = settings.output_dir;
+    quality.value = settings.quality ?? "";
+    audioOnly.checked = settings.audio_only;
+    browserCookies.checked = settings.use_browser_cookies;
+    maxRetries.value = settings.max_retries;
+  } catch (error) {
+    message.textContent = `Could not load settings: ${String(error)}`;
+  }
+}
+document.querySelector("#save-settings").addEventListener("click", async () => {
+  try {
+    await invoke("save_settings", {
+      settings: {
+        output_dir: outputDir.value.trim(),
+        quality: quality.value ? Number(quality.value) : null,
+        audio_only: audioOnly.checked,
+        use_browser_cookies: browserCookies.checked,
+        max_retries: Number(maxRetries.value),
+      },
+    });
+    message.textContent = "Download settings saved.";
+  } catch (error) {
+    message.textContent = `Could not save settings: ${String(error)}`;
+  }
+});
 document.querySelector("#refresh").addEventListener("click", refreshQueue);
 document.querySelector("#check-updates").addEventListener("click", async () => {
   const updateButton = document.querySelector("#check-updates");
@@ -131,6 +164,7 @@ document.querySelector("#check-updates").addEventListener("click", async () => {
   }
 });
 refreshQueue();
+loadSettings();
 setInterval(refreshQueue, 2000);
 
 function formatDuration(seconds) {

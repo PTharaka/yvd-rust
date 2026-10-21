@@ -29,6 +29,27 @@
         <p id="message" class="message"></p>
       </section>
 
+      <section class="card">
+        <div class="section-heading">
+          <h2>DOWNLOAD SETTINGS</h2>
+          <button id="save-settings" class="secondary">SAVE SETTINGS</button>
+        </div>
+        <div class="settings-grid">
+          <label>OUTPUT DIRECTORY<input id="output-dir" type="text" placeholder="downloads" /></label>
+          <label>VIDEO QUALITY<select id="quality">
+            <option value="">Best available</option>
+            <option value="2160">2160p</option>
+            <option value="1440">1440p</option>
+            <option value="1080">1080p</option>
+            <option value="720">720p</option>
+            <option value="480">480p</option>
+          </select></label>
+          <label class="checkbox"><input id="audio-only" type="checkbox" /> AUDIO ONLY (MP3)</label>
+          <label class="checkbox"><input id="browser-cookies" type="checkbox" /> USE CHROME COOKIES</label>
+          <label>MAX RETRIES<input id="max-retries" type="number" min="0" max="20" step="1" /></label>
+        </div>
+      </section>
+
       <section id="preview" class="card preview-card" hidden>
         <div class="section-heading">
           <h2>MEDIA PREVIEW</h2>

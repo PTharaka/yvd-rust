@@ -36,6 +36,20 @@ fn queue_path(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
     Ok(directory.join("queue.state"))
 }
 
+fn settings_path(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
+    let directory = app.path().app_data_dir().map_err(|error| error.to_string())?;
+    std::fs::create_dir_all(&directory).map_err(|error| error.to_string())?;
+    Ok(directory.join("settings.conf"))
+}
+
+fn load_settings(app: &tauri::AppHandle) -> Result<yvd_rust::settings::Settings, String> {
+    let path = settings_path(app)?;
+    if !path.exists() {
+        return Ok(yvd_rust::settings::Settings::default());
+    }
+    yvd_rust::settings::load(&path).map_err(|error| error.to_string())
+}
+
 fn load_tasks(app: &tauri::AppHandle) -> Result<(std::path::PathBuf, Vec<DownloadTask>), String> {
     let path = queue_path(app)?;
     let tasks = yvd_rust::persistence::load_queue(&path).map_err(|error| error.to_string())?;
@@ -106,13 +120,30 @@ fn queue_add(app: tauri::AppHandle, url: String) -> Result<String, String> {
         return Err("A YouTube URL is required.".to_string());
     }
     let (path, mut tasks) = load_tasks(&app)?;
+    let settings = load_settings(&app)?;
     let id = format!("download-{}", uuid::Uuid::new_v4());
-    tasks.push(DownloadTask::new(
-        &id,
-        DownloadOptions::new(url, "downloads"),
-    ));
+    let mut options = DownloadOptions::new(url, settings.output_dir);
+    options.quality = settings.quality;
+    options.audio_only = settings.audio_only;
+    options.use_browser_cookies = settings.use_browser_cookies;
+    tasks.push(DownloadTask::new(&id, options));
     save_tasks(&path, &tasks)?;
     Ok(id)
+}
+
+#[tauri::command]
+fn get_settings(app: tauri::AppHandle) -> Result<yvd_rust::settings::Settings, String> {
+    load_settings(&app)
+}
+
+#[tauri::command]
+fn save_settings(
+    app: tauri::AppHandle,
+    settings: yvd_rust::settings::Settings,
+) -> Result<(), String> {
+    settings.validate().map_err(|error| error.to_string())?;
+    let path = settings_path(&app)?;
+    yvd_rust::settings::save(&path, &settings).map_err(|error| error.to_string())
 }
 
 #[tauri::command]
@@ -259,6 +290,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             queue_status,
             queue_add,
+            get_settings,
+            save_settings,
             metadata_preview,
             start_download,
             pause_download,

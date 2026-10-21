@@ -31,6 +31,8 @@ parsing CLI output.
 
 The desktop app loads video or playlist metadata when the URL input loses focus.
 The preview must load successfully before using **ADD THIS TO QUEUE**.
+Download settings are persisted in the application data directory and apply to
+new queue items.
 
 ## Tauri desktop app
 
