@@ -149,6 +149,10 @@ document.querySelector("#check-updates").addEventListener("click", async () => {
   const updateButton = document.querySelector("#check-updates");
   updateButton.disabled = true;
   try {
+    if (await invoke("is_dev_build")) {
+      message.textContent = "Updates are available only in an installed release build.";
+      return;
+    }
     const update = await check();
     if (!update) {
       message.textContent = "You are using the latest version.";

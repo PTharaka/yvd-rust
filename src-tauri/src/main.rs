@@ -281,6 +281,11 @@ fn retry_download(app: tauri::AppHandle, id: String) -> Result<(), String> {
     save_tasks(&path, &tasks)
 }
 
+#[tauri::command]
+fn is_dev_build() -> bool {
+    cfg!(debug_assertions)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -296,7 +301,8 @@ pub fn run() {
             start_download,
             pause_download,
             cancel_download,
-            retry_download
+            retry_download,
+            is_dev_build
         ])
         .run(tauri::generate_context!())
         .expect("error while running Tauri application");
