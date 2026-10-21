@@ -14,15 +14,13 @@ struct YtDlpMetadata {
     entries: Option<Vec<serde_json::Value>>,
 }
 
-pub fn probe(yt_dlp: &Path, url: &str) -> io::Result<VideoMetadata> {
-    let output = Command::new(yt_dlp)
-        .args([
-            "--dump-single-json",
-            "--skip-download",
-            "--no-warnings",
-            url,
-        ])
-        .output()?;
+pub fn probe(yt_dlp: &Path, url: &str, use_browser_cookies: bool) -> io::Result<VideoMetadata> {
+    let mut command = Command::new(yt_dlp);
+    command.args(["--dump-single-json", "--skip-download", "--no-warnings"]);
+    if use_browser_cookies {
+        command.args(["--cookies-from-browser", "chrome"]);
+    }
+    let output = command.arg(url).output()?;
     if !output.status.success() {
         let error = String::from_utf8_lossy(&output.stderr).trim().to_string();
         return Err(io::Error::other(if error.is_empty() {

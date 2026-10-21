@@ -10,7 +10,7 @@ fn main() {
                 eprintln!("Usage: yvd-cli metadata <youtube-url>");
                 return;
             };
-            match metadata::probe(PathBuf::from("yt-dlp").as_path(), &url) {
+            match metadata::probe(PathBuf::from("yt-dlp").as_path(), &url, false) {
                 Ok(value) => println!("{value:?}"),
                 Err(error) => eprintln!("Metadata lookup failed: {error}"),
             }

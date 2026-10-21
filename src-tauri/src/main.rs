@@ -171,7 +171,10 @@ fn save_settings(
 }
 
 #[tauri::command]
-fn metadata_preview(url: String) -> Result<yvd_rust::model::VideoMetadata, String> {
+fn metadata_preview(
+    app: tauri::AppHandle,
+    url: String,
+) -> Result<yvd_rust::model::VideoMetadata, String> {
     let url = url.trim();
     if url.is_empty() {
         return Err("A video or playlist URL is required.".to_string());
@@ -179,8 +182,19 @@ fn metadata_preview(url: String) -> Result<yvd_rust::model::VideoMetadata, Strin
     if !url.starts_with("https://") && !url.starts_with("http://") {
         return Err("Enter a valid HTTP or HTTPS URL.".to_string());
     }
-    yvd_rust::metadata::probe(&resolve_tool("yt-dlp"), url)
-        .map_err(|error| error.to_string())
+    let settings = load_settings(&app)?;
+    yvd_rust::metadata::probe(&resolve_tool("yt-dlp"), url, settings.use_browser_cookies)
+        .map_err(|error| {
+            let message = error.to_string();
+            if message.contains("Sign in to confirm") && !settings.use_browser_cookies {
+                format!(
+                    "{message}\n\nYouTube requires authentication for this media. Enable \
+                     \"Use Chrome cookies\" in Download Settings, save the settings, and try again."
+                )
+            } else {
+                message
+            }
+        })
 }
 
 #[tauri::command]
