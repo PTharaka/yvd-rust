@@ -72,6 +72,7 @@ pub struct VideoMetadata {
     pub channel: Option<String>,
     pub duration_seconds: Option<u64>,
     pub thumbnail: Option<String>,
+    pub item_count: Option<usize>,
 }
 
 impl DownloadTask {

@@ -1,40 +1,44 @@
 use crate::model::VideoMetadata;
+use serde::Deserialize;
 use std::io;
 use std::path::Path;
 use std::process::Command;
 
+#[derive(Debug, Deserialize)]
+struct YtDlpMetadata {
+    title: Option<String>,
+    channel: Option<String>,
+    uploader: Option<String>,
+    duration: Option<f64>,
+    thumbnail: Option<String>,
+    entries: Option<Vec<serde_json::Value>>,
+}
+
 pub fn probe(yt_dlp: &Path, url: &str) -> io::Result<VideoMetadata> {
     let output = Command::new(yt_dlp)
-        .args(["--dump-single-json", "--skip-download", url])
+        .args([
+            "--dump-single-json",
+            "--skip-download",
+            "--no-warnings",
+            url,
+        ])
         .output()?;
     if !output.status.success() {
-        return Err(io::Error::other(
-            String::from_utf8_lossy(&output.stderr).trim(),
-        ));
+        let error = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        return Err(io::Error::other(if error.is_empty() {
+            "yt-dlp could not read metadata."
+        } else {
+            &error
+        }));
     }
-    let json = String::from_utf8_lossy(&output.stdout);
+
+    let metadata: YtDlpMetadata = serde_json::from_slice(&output.stdout)
+        .map_err(|error| io::Error::other(format!("Invalid metadata response: {error}")))?;
     Ok(VideoMetadata {
-        title: json_string(&json, "title"),
-        channel: json_string(&json, "channel").or_else(|| json_string(&json, "uploader")),
-        duration_seconds: json_number(&json, "duration"),
-        thumbnail: json_string(&json, "thumbnail"),
+        title: metadata.title,
+        channel: metadata.channel.or(metadata.uploader),
+        duration_seconds: metadata.duration.map(|value| value.round() as u64),
+        thumbnail: metadata.thumbnail,
+        item_count: metadata.entries.map(|entries| entries.len()),
     })
-}
-
-fn json_string(json: &str, key: &str) -> Option<String> {
-    let marker = format!("\"{key}\":");
-    let value = json.split_once(&marker)?.1.trim_start();
-    let value = value.strip_prefix('"')?;
-    Some(value.split('"').next()?.replace("\\\"", "\""))
-}
-
-fn json_number(json: &str, key: &str) -> Option<u64> {
-    let marker = format!("\"{key}\":");
-    json.split_once(&marker)?
-        .1
-        .trim_start()
-        .split([',', '}'])
-        .next()?
-        .parse()
-        .ok()
 }

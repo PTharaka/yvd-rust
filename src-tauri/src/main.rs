@@ -116,6 +116,19 @@ fn queue_add(app: tauri::AppHandle, url: String) -> Result<String, String> {
 }
 
 #[tauri::command]
+fn metadata_preview(url: String) -> Result<yvd_rust::model::VideoMetadata, String> {
+    let url = url.trim();
+    if url.is_empty() {
+        return Err("A video or playlist URL is required.".to_string());
+    }
+    if !url.starts_with("https://") && !url.starts_with("http://") {
+        return Err("Enter a valid HTTP or HTTPS URL.".to_string());
+    }
+    yvd_rust::metadata::probe(std::path::Path::new("yt-dlp"), url)
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
 fn start_download(
     app: tauri::AppHandle,
     state: tauri::State<'_, AppState>,
@@ -246,6 +259,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             queue_status,
             queue_add,
+            metadata_preview,
             start_download,
             pause_download,
             cancel_download,

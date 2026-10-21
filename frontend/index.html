@@ -24,9 +24,25 @@
         <label for="url">VIDEO OR PLAYLIST URL</label>
         <div class="input-row">
           <input id="url" type="url" placeholder="Paste a YouTube video or playlist URL" />
-          <button id="add">ADD TO QUEUE</button>
+          <button id="add">PREVIEW MEDIA</button>
         </div>
         <p id="message" class="message"></p>
+      </section>
+
+      <section id="preview" class="card preview-card" hidden>
+        <div class="section-heading">
+          <h2>MEDIA PREVIEW</h2>
+          <button id="clear-preview" class="secondary">CLEAR</button>
+        </div>
+        <div class="preview-content">
+          <img id="thumbnail" alt="" />
+          <div>
+            <h3 id="preview-title"></h3>
+            <p id="preview-channel" class="subtitle"></p>
+            <p id="preview-details" class="subtitle"></p>
+            <button id="add-preview">ADD THIS TO QUEUE</button>
+          </div>
+        </div>
       </section>
 
       <section class="card">

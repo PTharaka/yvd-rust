@@ -29,6 +29,9 @@ The queue file is local application state and is intentionally not committed. Th
 future Tauri or Slint frontend can use the library modules directly instead of
 parsing CLI output.
 
+The desktop app loads video or playlist metadata when the URL input loses focus.
+The preview must load successfully before using **ADD THIS TO QUEUE**.
+
 ## Tauri desktop app
 
 ```sh
