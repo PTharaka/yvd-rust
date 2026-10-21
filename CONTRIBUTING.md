@@ -30,7 +30,8 @@ Branch names should use `feature/`, `fix/`, `chore/`, or `docs/`.
 ## Releases and updates
 
 Releases are created by pushing a version tag after the pull request has been
-merged:
+merged. The tag version must match the `version` in
+`src-tauri/tauri.conf.json`:
 
 ```sh
 git switch main
@@ -39,7 +40,24 @@ git tag v0.1.0
 git push origin v0.1.0
 ```
 
-The release workflow builds installers and publishes a draft GitHub Release.
+For a beta release, use a hyphenated tag:
+
+```sh
+git tag v0.1.0-beta.1
+git push origin v0.1.0-beta.1
+```
+
+The release workflow builds and publishes downloadable installers for:
+
+- macOS Apple Silicon
+- macOS Intel
+- Windows x64
+- Linux x64
+
+The GitHub Release is published automatically. A tag such as `v0.1.0-beta.1`
+is marked as a prerelease; a tag such as `v0.1.0` is marked as a stable
+release.
+
 The Tauri updater reads its signed `latest.json` manifest from the latest
 GitHub Release. Keep the updater signing private key only in GitHub Actions
 secrets; never commit it.
