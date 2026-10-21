@@ -1,0 +1,8 @@
+/target/
+**/target/
+._*
+queue.state
+settings.conf
+*.log
+frontend/node_modules/
+frontend/dist/

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>YouTube Downloader Pro</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header>
+        <div>
+          <p class="eyebrow">YVD RUST</p>
+          <h1>YouTube Downloader Pro</h1>
+          <p class="subtitle">Queue downloads, pause safely, and resume from partial files.</p>
+        </div>
+        <div class="header-actions">
+          <button id="check-updates" class="secondary">CHECK FOR UPDATES</button>
+          <span id="status" class="status">READY</span>
+        </div>
+      </header>
+
+      <section class="card">
+        <label for="url">VIDEO OR PLAYLIST URL</label>
+        <div class="input-row">
+          <input id="url" type="url" placeholder="Paste a YouTube video or playlist URL" />
+          <button id="add">ADD TO QUEUE</button>
+        </div>
+        <p id="message" class="message"></p>
+      </section>
+
+      <section class="card">
+        <div class="section-heading">
+          <h2>DOWNLOAD QUEUE</h2>
+          <button id="refresh" class="secondary">REFRESH</button>
+        </div>
+        <pre id="queue">Queue is empty.</pre>
+      </section>
+    </main>
+    <script type="module" src="/main.js"></script>
+  </body>
+</html>
