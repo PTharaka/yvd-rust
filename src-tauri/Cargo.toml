@@ -9,6 +9,7 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri = { version = "2", features = [] }
 tauri-plugin-process = "2"
+tauri-plugin-dialog = "2"
 tauri-plugin-updater = "2"
 yvd-rust = { package = "yvd-rust", path = ".." }
 serde = { version = "1", features = ["derive"] }

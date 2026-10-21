@@ -7,7 +7,7 @@ pub fn save_queue(path: &Path, tasks: &[DownloadTask]) -> io::Result<()> {
     let mut content = String::from("# YVD queue state\n");
     for task in tasks {
         content.push_str(&format!(
-            "{}\t{}\t{}\t{}\t{}\t{}\n",
+            "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n",
             task.id,
             task.status.as_str(),
             task.options.output_dir.display(),
@@ -16,7 +16,11 @@ pub fn save_queue(path: &Path, tasks: &[DownloadTask]) -> io::Result<()> {
             task.error
                 .as_deref()
                 .unwrap_or("")
-                .replace(['\t', '\r', '\n'], " ")
+                .replace(['\t', '\r', '\n'], " "),
+            task.options.quality.map_or_else(String::new, |value| value.to_string()),
+            task.options.audio_only,
+            task.options.use_browser_cookies,
+            task.options.max_retries
         ));
     }
 
@@ -32,7 +36,7 @@ pub fn load_queue(path: &Path) -> io::Result<Vec<DownloadTask>> {
         .lines()
         .filter(|line| !line.starts_with('#'))
     {
-        let fields: Vec<_> = line.splitn(6, '\t').collect();
+        let fields: Vec<_> = line.splitn(10, '\t').collect();
         if fields.len() < 4 {
             continue;
         }
@@ -49,6 +53,13 @@ pub fn load_queue(path: &Path) -> io::Result<Vec<DownloadTask>> {
             .get(5)
             .filter(|value| !value.is_empty())
             .map(|value| value.to_string());
+        task.options.quality = fields.get(6).and_then(|value| value.parse().ok());
+        task.options.audio_only = fields.get(7).is_some_and(|value| *value == "true");
+        task.options.use_browser_cookies = fields.get(8).is_some_and(|value| *value == "true");
+        task.options.max_retries = fields
+            .get(9)
+            .and_then(|value| value.parse().ok())
+            .unwrap_or(task.options.max_retries);
         tasks.push(task);
     }
     Ok(tasks)

@@ -8,7 +8,7 @@ pub fn build_yt_dlp_args(options: &DownloadOptions, yt_dlp: &Path, ffmpeg: &Path
         "--concurrent-fragments".into(),
         "4".into(),
         "--retries".into(),
-        "10".into(),
+        options.max_retries.to_string(),
         "--fragment-retries".into(),
         "10".into(),
         "--continue".into(),
@@ -20,7 +20,13 @@ pub fn build_yt_dlp_args(options: &DownloadOptions, yt_dlp: &Path, ffmpeg: &Path
             .to_string_lossy()
             .into_owned(),
         "-o".into(),
-        format!("{}/%(title)s.%(ext)s", options.output_dir.to_string_lossy()),
+        format!(
+            "{}",
+            options
+                .output_dir
+                .join("%(title)s.%(ext)s")
+                .to_string_lossy()
+        ),
     ];
 
     if options.use_browser_cookies {
